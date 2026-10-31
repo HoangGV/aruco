@@ -1,3 +1,4 @@
+
 /*
 Copyright (c) 2020 Damiano Falcioni
 Copyright (c) 2011 Juan Mellado
@@ -29,9 +30,10 @@ References:
   https://github.com/jcmellado/js-aruco
 */
 
+import { CV } from './cv.js';
+
 var AR = {};
-var CV = this.CV || require('./cv').CV;
-this.AR = AR;
+
 
 AR.DICTIONARIES = {
   ARUCO: {
@@ -466,3 +468,7 @@ AR.Detector.prototype.rotate2 = function (src, rotation) {
 
   return dst;
 };
+
+export { AR };
+export default AR;
+

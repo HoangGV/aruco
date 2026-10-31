@@ -29,8 +29,8 @@ References:
   http://incubator.quasimondo.com/processing/fast_blur_deluxe.php
 */
 
-var CV = CV || {};
-this.CV = CV;
+var CV = {};
+
 
 CV.Image = function(width, height, data){
   this.width = width || 0;
@@ -736,4 +736,7 @@ CV.binaryBorder = function(imageSrc, dst){
 
   return dst;
 };
+
+export { CV };
+export default CV;
 

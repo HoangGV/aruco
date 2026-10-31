@@ -1,0 +1,8 @@
+{
+  "name": "NDH · Tương tác giấy",
+  "description": "Hệ thống trắc nghiệm tương tác giấy bằng camera và thẻ ArUco cho lớp học",
+  "prompt": "NDH - Tương tác giấy: Classroom interactive paper card quiz system",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
