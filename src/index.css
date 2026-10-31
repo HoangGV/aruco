@@ -124,7 +124,7 @@
     height: 297mm !important;
     max-height: 297mm !important;
     box-sizing: border-box !important;
-    padding: 10mm 30mm !important; /* Cách lề trái - phải mỗi bên 3cm (30mm) */
+    padding: 10mm 20mm !important; /* Cách lề trái - phải mỗi bên 2cm (20mm), tổng 2 lề là 4cm */
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
@@ -137,9 +137,9 @@
     overflow: hidden !important;
   }
 
-  /* Khung thẻ 150mm x 240mm với viền nét đứt đen */
+  /* Khung thẻ 170mm x 240mm với viền nét đứt đen */
   .card-border-box {
-    width: 150mm !important;
+    width: 170mm !important;
     height: 240mm !important;
     border: 3px dashed #000000 !important;
     box-sizing: border-box !important;
@@ -206,10 +206,10 @@
     color: #000000 !important;
   }
 
-  /* Mã ArUco SVG phóng to tối đa 134mm x 134mm */
+  /* Mã ArUco SVG phóng to tối đa 146mm x 146mm */
   .card-marker-wrap {
-    width: 134mm !important;
-    height: 134mm !important;
+    width: 146mm !important;
+    height: 146mm !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -269,7 +269,7 @@
 
   /* Chân thẻ: STT, Họ tên học sinh cỡ ~18px, Lớp, Môn học */
   .card-footer-info {
-    width: 150mm !important;
+    width: 170mm !important;
     border-top: 3px solid #000000 !important;
     padding-top: 3.5mm !important;
     margin-top: 3mm !important;

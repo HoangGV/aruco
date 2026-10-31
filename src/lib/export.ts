@@ -45,10 +45,24 @@ const sheetXml = (rows: any[][]) =>
     )
     .join('')}</sheetData></worksheet>`;
 
+/**
+ * Tách và làm sạch họ tên học sinh, loại bỏ số thứ tự ở đầu (ví dụ: "1. ", "01 - ", "#1 ", "1/ ")
+ * để cột Họ và tên chỉ chứa họ tên, không chứa số thứ tự.
+ */
+export const cleanStudentName = (raw: string): string => {
+  const trimmed = (raw || '').trim();
+  // Bỏ các ký tự số thứ tự đầu dòng như 1., 01., 1 -, 1/, 1), #1, hoặc 1 kèm khoảng trắng
+  const cleaned = trimmed
+    .replace(/^#?\d+[\s.:)\-/_|]+/u, '')
+    .replace(/^\d+\s+/u, '')
+    .trim();
+  return cleaned || trimmed;
+};
+
 export const getStudentList = (c: ClassItem): string[] =>
   (c.names || '')
     .split('\n')
-    .map(s => s.trim())
+    .map(s => cleanStudentName(s))
     .filter(Boolean);
 
 export async function exportToXlsx(classes: ClassItem[], teacher = '') {
@@ -76,10 +90,10 @@ export async function exportToXlsx(classes: ClassItem[], teacher = '') {
         ['Môn học', c.subject || ''],
         ['Lớp', c.name],
         [],
-        ['Số thẻ', 'Học sinh', ...rs.map(r => fmt(r.at) + ' (' + r.total + ' câu)')],
+        ['Số thẻ', 'Họ và tên', ...rs.map(r => fmt(r.at) + ' (' + r.total + ' câu)')],
         ...ns.map((n, i) => [
           i + 1,
-          n,
+          cleanStudentName(n),
           ...rs.map(r => {
             const x = r.rows.find(row => row.id === i + 1);
             return x ? x.score : '';

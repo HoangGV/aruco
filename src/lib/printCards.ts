@@ -8,7 +8,7 @@ import { getStudentList } from './export';
  * 1. Kiểm tra danh sách học sinh
  * 2. Xóa .print-area cũ nếu có và tạo .print-area mới gắn thẳng vào document.body
  * 3. Mỗi học sinh là 1 phiếu A4 chuẩn (@page size: A4 portrait, margin: 0)
- * 4. Kích thước thẻ cách lề trái-phải 3cm (khung 150mm trên trang A4 210mm)
+ * 4. Kích thước thẻ cách lề trái-phải 2cm (khung 170mm trên trang A4 210mm, tổng 2 lề 4cm)
  * 5. Tên học sinh cỡ ~18px, đáp án A (ĐÚNG), B (SAI), C, D xoay chuẩn 4 hướng
  * 6. Gọi window.print() ngay lập tức để mở cửa sổ in như Windows + P / Ctrl + P
  */
@@ -36,7 +36,7 @@ export function printClassCards(cls: ClassItem, showToast?: (msg: string) => voi
 
     return `
       <article class="a4-card-page">
-        <!-- Khung viền thẻ 150mm (cách lề trái - phải mỗi bên 3cm) -->
+        <!-- Khung viền thẻ 170mm (cách lề trái - phải mỗi bên 2cm) -->
         <div class="card-border-box">
           <!-- Cạnh trên: A (ĐÚNG) - Hướng thẳng đứng 0° -->
           <div class="card-edge-top">

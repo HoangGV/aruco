@@ -11,7 +11,7 @@ interface PrintSheetProps {
 /**
  * PrintSheet Component
  * Mỗi thẻ là 1 trang A4 chuẩn (210mm x 297mm).
- * Khung thẻ 150mm cách lề trái - phải mỗi bên 3cm.
+ * Khung thẻ 170mm cách lề trái - phải mỗi bên 2cm (tổng 2 lề 4cm).
  * Tên học sinh cỡ 18px.
  * Hướng đáp án xoay 4 chiều chuẩn.
  */
@@ -28,7 +28,7 @@ export const PrintSheet: React.FC<PrintSheetProps> = ({ cls }) => {
 
         return (
           <article key={studentId} className="a4-card-page">
-            {/* Khung thẻ 150mm cách lề trái - phải 3cm */}
+            {/* Khung thẻ 170mm cách lề trái - phải 2cm */}
             <div className="card-border-box">
               {/* Cạnh TRÊN: A (ĐÚNG) - 0° */}
               <div className="card-edge-top">
