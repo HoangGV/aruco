@@ -143,14 +143,19 @@ export const ScannerView: React.FC<ScannerViewProps> = ({
         scannerKeyRef.current
       );
 
+      const previousSubmissions = stateRef.current?.submissions || {};
       const ok = filterAcknowledged(batch, r.state, roomCode, curQ.id);
       if (ok.length) {
         gameAudio.beep();
         const newEntries = ok.map(a => {
           const p = r.state.players?.find((pl: any) => pl.id === a.id);
+          const oldAns = previousSubmissions[a.id];
+          if (oldAns && oldAns !== a.answer) {
+            return `${p?.name || `Học sinh ${a.id}`}: ${a.answer} (đổi từ ${oldAns})`;
+          }
           return `${p?.name || `Học sinh ${a.id}`}: ${a.answer}`;
         });
-        setLogs(prev => [...newEntries, ...prev].slice(0, 8));
+        setLogs(prev => [...newEntries, ...prev].slice(0, 10));
       }
       if (r.state) setSessionState(r.state);
     } catch (e: any) {

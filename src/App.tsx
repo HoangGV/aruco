@@ -7,7 +7,7 @@ import { StageView } from './components/StageView';
 import { ScannerView } from './components/ScannerView';
 import { PairModal } from './components/PairModal';
 import { RescueModal } from './components/RescueModal';
-import { PrintCardsModal } from './components/PrintCardsModal';
+import { PrintSheet, printClassCards } from './components/PrintSheet';
 import { parseMarkdownQuestions } from './lib/parser';
 import { exportToXlsx, downloadText, getStudentList } from './lib/export';
 import { portableApi, readyHost, subscribeToStatus, getStatus, closeHost } from './lib/net';
@@ -296,7 +296,7 @@ export function App() {
   };
 
   const handleDeleteResult = (idx: number) => {
-    if (!currentClassId || !confirm('Xóa kết quả lần kiểm tra này?')) return;
+    if (!currentClassId) return;
     const updated = data.classes.map(c => {
       if (c.id === currentClassId) {
         const results = [...(c.results || [])];
@@ -306,7 +306,12 @@ export function App() {
       return c;
     });
     saveData({ ...data, classes: updated });
-    showToast('Đã xóa kết quả.');
+    showToast('Đã xóa kết quả kiểm tra.');
+  };
+
+  const handlePrintCards = () => {
+    if (!currentClass) return;
+    printClassCards(currentClass, showToast);
   };
 
   // Import / Export handlers
@@ -493,7 +498,7 @@ export function App() {
             cls={currentClass}
             onUpdateClass={handleUpdateClass}
             onBackToHome={() => setView('home')}
-            onPrintCards={() => setShowPrintModal(true)}
+            onPrintCards={handlePrintCards}
             onImportMd={handleImportMdClick}
             onExportMd={handleExportMd}
             onExportClassXlsx={handleExportClassXlsx}
@@ -546,12 +551,8 @@ export function App() {
         />
       )}
 
-      {showPrintModal && currentClass && (
-        <PrintCardsModal
-          cls={currentClass}
-          onClose={() => setShowPrintModal(false)}
-        />
-      )}
+      {/* Always ready print sheets for current class */}
+      {currentClass && <PrintSheet cls={currentClass} />}
     </div>
   );
 }

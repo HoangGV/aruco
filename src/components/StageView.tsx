@@ -37,6 +37,29 @@ export const StageView: React.FC<StageViewProps> = ({
 }) => {
   const [seconds, setSeconds] = useState(0);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (e) {
+      console.warn('Fullscreen toggle not available:', e);
+    }
+  };
 
   // Sound effects on stage transitions
   useEffect(() => {
@@ -115,12 +138,12 @@ export const StageView: React.FC<StageViewProps> = ({
       className="fixed inset-0 flex flex-col z-40 select-none overflow-hidden transition-colors duration-200"
       style={{ backgroundColor: bgColor, color: textColor }}
     >
-      {/* Top stage viewport */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col justify-between max-w-7xl mx-auto w-full">
+      {/* Top stage viewport - full width with ~2cm total side margin */}
+      <div className="flex-1 overflow-y-auto px-3 md:px-5 py-3 flex flex-col justify-between w-full max-w-none">
         {/* Phase: Lobby */}
         {room.phase === 'lobby' && (
           <div className="my-auto text-center space-y-6">
-            <h1 className="text-4xl md:text-7xl font-black tracking-tight">
+            <h1 className="text-5xl md:text-8xl font-black tracking-tight">
               {cls.name}
             </h1>
             <p className="text-2xl md:text-4xl font-semibold opacity-90">
@@ -128,7 +151,7 @@ export const StageView: React.FC<StageViewProps> = ({
             </p>
             <div className="pt-8">
               <button
-                className="ndh-btn ndh-btn-pri text-2xl md:text-3xl px-10 py-5 font-black uppercase tracking-wider shadow-2xl"
+                className="ndh-btn ndh-btn-pri text-2xl md:text-3xl px-12 py-5 font-black uppercase tracking-wider shadow-2xl"
                 onClick={() => onAction('start')}
               >
                 Bắt đầu ngay
@@ -139,15 +162,20 @@ export const StageView: React.FC<StageViewProps> = ({
 
         {/* Phase: Question / Paused / Revealed */}
         {(room.phase === 'question' || room.phase === 'paused' || room.phase === 'revealed') && q && (
-          <div className="space-y-4 flex-1 flex flex-col justify-between">
+          <div className="space-y-3 flex-1 flex flex-col justify-between">
             {/* Question Top Header Bar */}
-            <div className="flex justify-between items-center border-b-4 pb-3" style={{ borderColor }}>
-              <div className="flex items-center gap-4">
+            <div className="flex justify-between items-center border-b-4 pb-2.5" style={{ borderColor }}>
+              <div className="flex items-center gap-3 md:gap-5 flex-wrap">
                 <span className="text-2xl md:text-4xl font-black">
                   Câu {room.index + 1}/{room.questionCount}
                 </span>
-                <span className="text-base md:text-2xl opacity-80 font-bold">
-                  {submissionsCount}/{alivePlayers.length} thẻ đã nhận
+                <span className="text-base md:text-2xl font-bold flex items-center gap-2">
+                  <span>{submissionsCount}/{alivePlayers.length} thẻ đã nhận</span>
+                  {room.phase === 'question' && (
+                    <span className="text-xs md:text-sm font-semibold opacity-80 bg-neutral-500/20 px-2 py-0.5 rounded border border-current">
+                      Chốt đáp án cuối khi hết giờ
+                    </span>
+                  )}
                 </span>
               </div>
               <div
@@ -183,7 +211,7 @@ export const StageView: React.FC<StageViewProps> = ({
               >
                 {/* Left Column: Media display if question has image/video */}
                 {hasMedia && (
-                  <div className="flex flex-col items-center justify-center p-3 border-4 bg-black/5 max-h-[52vh] overflow-hidden" style={{ borderColor }}>
+                  <div className="flex flex-col items-center justify-center p-2 border-4 bg-black/5 max-h-[62vh] overflow-hidden" style={{ borderColor }}>
                     {mediaItems.map((item, idx) => (
                       <div key={idx} className="w-full flex items-center justify-center">
                         {item.isVideo ? (
@@ -191,14 +219,14 @@ export const StageView: React.FC<StageViewProps> = ({
                             src={item.url}
                             controls
                             playsInline
-                            className="max-h-[46vh] max-w-full object-contain mx-auto border-2"
+                            className="max-h-[58vh] max-w-full w-auto object-contain mx-auto border-2 shadow-lg"
                             style={{ borderColor }}
                           />
                         ) : (
                           <img
                             src={item.url}
                             alt={item.alt}
-                            className="max-h-[46vh] max-w-full object-contain mx-auto border-2 shadow-md"
+                            className="max-h-[58vh] max-w-full w-auto object-contain mx-auto border-2 shadow-lg"
                             style={{ borderColor }}
                           />
                         )}
@@ -345,22 +373,22 @@ export const StageView: React.FC<StageViewProps> = ({
         )}
       </div>
 
-      {/* Bottom Control Bar */}
-      <footer className="h-20 border-t-4 border-black bg-white text-black flex items-center justify-between px-6 gap-3 flex-wrap overflow-x-auto no-print">
+      {/* Bottom Control Bar - Compact height (Requirement 3) */}
+      <footer className="h-14 md:h-16 border-t-3 border-black bg-white text-black flex items-center justify-between px-3 md:px-5 gap-2 flex-wrap overflow-x-auto no-print select-none">
         {/* Dynamic game actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {room.phase === 'lobby' && (
-            <button className="ndh-btn ndh-btn-pri" onClick={() => onAction('start')}>
+            <button className="ndh-btn ndh-btn-pri py-1 px-3.5 text-sm md:text-base" onClick={() => onAction('start')}>
               ▶ Bắt đầu
             </button>
           )}
 
           {room.phase === 'question' && (
             <>
-              <button className="ndh-btn" onClick={() => onAction('pause')}>
+              <button className="ndh-btn py-1 px-3 text-sm md:text-base" onClick={() => onAction('pause')}>
                 ⏸ Tạm dừng
               </button>
-              <button className="ndh-btn ndh-btn-pri" onClick={() => onAction('reveal')}>
+              <button className="ndh-btn ndh-btn-pri py-1 px-3.5 text-sm md:text-base" onClick={() => onAction('reveal')}>
                 👁 Công bố đáp án
               </button>
             </>
@@ -368,10 +396,10 @@ export const StageView: React.FC<StageViewProps> = ({
 
           {room.phase === 'paused' && (
             <>
-              <button className="ndh-btn ndh-btn-pri" onClick={() => onAction('resume')}>
+              <button className="ndh-btn ndh-btn-pri py-1 px-3.5 text-sm md:text-base" onClick={() => onAction('resume')}>
                 ▶ Tiếp tục
               </button>
-              <button className="ndh-btn" onClick={() => onAction('reveal')}>
+              <button className="ndh-btn py-1 px-3 text-sm md:text-base" onClick={() => onAction('reveal')}>
                 👁 Công bố đáp án
               </button>
             </>
@@ -379,12 +407,12 @@ export const StageView: React.FC<StageViewProps> = ({
 
           {room.phase === 'revealed' && (
             <>
-              <button className="ndh-btn ndh-btn-pri" onClick={() => onAction('next')}>
+              <button className="ndh-btn ndh-btn-pri py-1 px-3.5 text-sm md:text-base" onClick={() => onAction('next')}>
                 {isLastQuestion ? 'Xem kết quả' : 'Câu tiếp theo →'}
               </button>
               {room.config.eliminate && (
-                <button className="ndh-btn" onClick={onOpenRescueModal}>
-                  🚑 Cứu hộ học sinh
+                <button className="ndh-btn py-1 px-3 text-sm md:text-base" onClick={onOpenRescueModal}>
+                  🚑 Cứu hộ
                 </button>
               )}
             </>
@@ -392,38 +420,47 @@ export const StageView: React.FC<StageViewProps> = ({
 
           {room.phase === 'finished' && (
             <>
-              <button className="ndh-btn ndh-btn-pri" onClick={onExportXlsx}>
+              <button className="ndh-btn ndh-btn-pri py-1 px-3.5 text-sm md:text-base" onClick={onExportXlsx}>
                 📊 Xuất .xlsx
               </button>
-              <button className="ndh-btn" onClick={() => onAction('reset')}>
-                🔄 Làm lại bộ này
+              <button className="ndh-btn py-1 px-3 text-sm md:text-base" onClick={() => onAction('reset')}>
+                🔄 Làm lại
               </button>
             </>
           )}
         </div>
 
-        {/* Companion and Utility Controls */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 font-bold text-sm bg-neutral-100 px-3 py-1.5 border-2 border-black">
+        {/* Companion, Fullscreen and Utility Controls */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 font-bold text-xs md:text-sm bg-neutral-100 px-2.5 py-1 border-2 border-black">
             <span
-              className={`w-3.5 h-3.5 rounded-none border border-black inline-block ${
+              className={`w-3 h-3 rounded-none border border-black inline-block ${
                 phoneConnected ? 'bg-emerald-600' : 'bg-neutral-300'
               }`}
             />
-            <span>Điện thoại {phoneConnected ? '(Đã nối)' : ''}</span>
+            <span className="hidden sm:inline">Điện thoại</span>
           </div>
 
-          <button className="ndh-btn" onClick={onOpenPairModal}>
-            📱 Ghép nối điện thoại
+          <button className="ndh-btn py-1 px-2.5 text-xs md:text-sm" onClick={onOpenPairModal}>
+            📱 Ghép nối
           </button>
 
-          <button className="ndh-btn" onClick={onThemeToggle}>
-            Nền: {theme === 'dark' ? 'đen' : 'kem'}
+          <button className="ndh-btn py-1 px-2.5 text-xs md:text-sm" onClick={onThemeToggle}>
+            {theme === 'dark' ? 'Nền kem' : 'Nền đen'}
           </button>
 
-          {/* Requirement 5: In-app confirmation modal for Thoát */}
+          {/* Fullscreen Button (Fn F11 / F11 - Requirement 3) */}
           <button
-            className="ndh-btn ndh-btn-dng"
+            className="ndh-btn py-1 px-3 text-xs md:text-sm flex items-center gap-1.5 font-black bg-neutral-100 hover:bg-neutral-200"
+            onClick={toggleFullscreen}
+            title={isFullscreen ? 'Thu nhỏ màn hình (Esc)' : 'Phóng toàn màn hình (Fn F11)'}
+          >
+            {isFullscreen ? '🗗 Thu nhỏ' : '⛶ Toàn màn hình'}
+          </button>
+
+          {/* In-app confirmation modal for Thoát */}
+          <button
+            className="ndh-btn ndh-btn-dng py-1 px-3 text-xs md:text-sm font-bold"
             onClick={() => setShowExitConfirm(true)}
           >
             Thoát

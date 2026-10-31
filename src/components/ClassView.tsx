@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { ClassItem } from '../types';
 import { parseMarkdownQuestions, GUIDE } from '../lib/parser';
 import { getStudentList } from '../lib/export';
@@ -26,6 +26,7 @@ export const ClassView: React.FC<ClassViewProps> = ({
   onDeleteResult,
   onStartQuiz
 }) => {
+  const [confirmDeleteIdx, setConfirmDeleteIdx] = useState<number | null>(null);
   const students = useMemo(() => getStudentList(cls), [cls.names]);
   const parsed = useMemo(() => parseMarkdownQuestions(cls.md, cls.sec || 30), [cls.md, cls.sec]);
 
@@ -184,7 +185,7 @@ export const ClassView: React.FC<ClassViewProps> = ({
                 </span>
                 <button
                   className="ndh-btn ndh-btn-dng py-1 px-3 text-sm"
-                  onClick={() => onDeleteResult(i)}
+                  onClick={() => setConfirmDeleteIdx(i)}
                 >
                   Xóa
                 </button>
@@ -208,6 +209,40 @@ export const ClassView: React.FC<ClassViewProps> = ({
           Bắt đầu kiểm tra
         </button>
       </div>
+
+      {/* In-App Confirmation Modal for Xóa kết quả đã lưu */}
+      {confirmDeleteIdx !== null && cls.results && cls.results[confirmDeleteIdx] && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="ndh-box p-6 max-w-md w-full space-y-4 bg-white text-black shadow-2xl">
+            <h3 className="text-2xl font-black">Xóa kết quả kiểm tra?</h3>
+            <p className="text-base font-semibold text-neutral-700">
+              Bạn có chắc chắn muốn xóa vĩnh viễn kết quả kiểm tra lúc{' '}
+              <span className="text-black font-bold">
+                {new Date(cls.results[confirmDeleteIdx].at).toLocaleString('vi-VN')}
+              </span>{' '}
+              ({cls.results[confirmDeleteIdx].total} câu)? Thao tác này không thể hoàn tác.
+            </p>
+            <div className="flex justify-end gap-3 pt-3">
+              <button
+                className="ndh-btn"
+                onClick={() => setConfirmDeleteIdx(null)}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                className="ndh-btn ndh-btn-dng font-bold"
+                onClick={() => {
+                  const idx = confirmDeleteIdx;
+                  setConfirmDeleteIdx(null);
+                  onDeleteResult(idx);
+                }}
+              >
+                Xác nhận xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

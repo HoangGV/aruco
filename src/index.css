@@ -21,63 +21,6 @@
   }
 }
 
-/* Printing styling */
-@media print {
-  html, body {
-    background: #ffffff !important;
-    color: #000000 !important;
-    height: auto !important;
-    min-height: 100% !important;
-    overflow: visible !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  .no-print {
-    display: none !important;
-  }
-
-  .print-only {
-    display: block !important;
-  }
-
-  .print-modal-overlay {
-    position: static !important;
-    inset: auto !important;
-    background: transparent !important;
-    overflow: visible !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    box-shadow: none !important;
-    z-index: auto !important;
-  }
-
-  .print-sheet {
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    box-shadow: none !important;
-  }
-
-  .print-card-item {
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
-  }
-
-  @page {
-    size: A4 portrait;
-    margin: 8mm;
-  }
-}
-
-@media screen {
-  .print-only {
-    display: none !important;
-  }
-}
-
 /* Custom crisp buttons & borders */
 .ndh-box {
   border: 3px solid #000000;
@@ -130,4 +73,240 @@
 .ndh-input:focus-visible {
   outline: 4px solid #2F54D0;
   outline-offset: 2px;
+}
+
+/* ========================================================
+   PRINTING SYSTEM: 1 PHIẾU TRẢ LỜI = 1 TRANG A4 CHUẨN
+   Theo kiến trúc trac_nghiem_the_giay_v1.html:
+   - Ẩn hoàn toàn giao diện web: body > *:not(.print-area) { display: none !important; }
+   - Chỉ hiển thị .print-area trực tiếp trên document.body
+   - Khổ A4 đứng 210mm x 297mm, cách lề trái - phải 3cm (khung 150mm)
+   - Tên học sinh cỡ 18px, đáp án A (ĐÚNG), B (SAI), C, D xoay chuẩn 4 hướng
+   ======================================================== */
+.print-area {
+  display: none !important;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  html, body {
+    width: 210mm !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Ẩn triệt để toàn bộ ứng dụng web (#root, modals, toast...) */
+  body > *:not(.print-area) {
+    display: none !important;
+  }
+
+  /* Chỉ hiển thị khu vực in .print-area */
+  .print-area {
+    display: block !important;
+    position: static !important;
+    width: 210mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .a4-card-page {
+    width: 210mm !important;
+    height: 297mm !important;
+    max-height: 297mm !important;
+    box-sizing: border-box !important;
+    padding: 10mm 30mm !important; /* Cách lề trái - phải mỗi bên 3cm (30mm) */
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    background: #ffffff !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    overflow: hidden !important;
+  }
+
+  /* Khung thẻ 150mm x 240mm với viền nét đứt đen */
+  .card-border-box {
+    width: 150mm !important;
+    height: 240mm !important;
+    border: 3px dashed #000000 !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 6mm 4mm !important;
+    background: #ffffff !important;
+  }
+
+  /* Cạnh TRÊN: A (ĐÚNG) - Hướng thẳng đứng 0° */
+  .card-edge-top {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+    transform: rotate(0deg) !important;
+  }
+
+  .card-letter-a {
+    font-size: 26px !important;
+    font-weight: 900 !important;
+    letter-spacing: 1px !important;
+    color: #000000 !important;
+  }
+
+  .card-tag-dung {
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    letter-spacing: 1.5px !important;
+    border-bottom: 2px solid #000000 !important;
+    padding: 0 4px !important;
+    margin-top: 2px !important;
+    color: #000000 !important;
+  }
+
+  /* Hàng giữa: D - Mã ArUco SVG lớn - B */
+  .card-middle-row {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 0 2mm !important;
+    box-sizing: border-box !important;
+  }
+
+  /* D TRÁI: Xoay -90° */
+  .card-edge-left {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 26px !important;
+    line-height: 1 !important;
+    transform: rotate(-90deg) !important;
+  }
+
+  .card-letter-d {
+    font-size: 26px !important;
+    font-weight: 900 !important;
+    color: #000000 !important;
+  }
+
+  /* Mã ArUco SVG phóng to tối đa 134mm x 134mm */
+  .card-marker-wrap {
+    width: 134mm !important;
+    height: 134mm !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: #ffffff !important;
+    box-sizing: border-box !important;
+  }
+
+  .card-marker-wrap svg {
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+  }
+
+  /* B PHẢI: Xoay 90° */
+  .card-edge-right {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 26px !important;
+    line-height: 1 !important;
+    transform: rotate(90deg) !important;
+  }
+
+  .card-letter-b {
+    font-size: 26px !important;
+    font-weight: 900 !important;
+    letter-spacing: 1px !important;
+    color: #000000 !important;
+  }
+
+  .card-tag-sai {
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    letter-spacing: 1.5px !important;
+    border-bottom: 2px solid #000000 !important;
+    padding: 0 4px !important;
+    margin-top: 2px !important;
+    color: #000000 !important;
+  }
+
+  /* Cạnh DƯỚI: C - Xoay 180° */
+  .card-edge-bottom {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+    transform: rotate(180deg) !important;
+  }
+
+  .card-letter-c {
+    font-size: 26px !important;
+    font-weight: 900 !important;
+    color: #000000 !important;
+  }
+
+  /* Chân thẻ: STT, Họ tên học sinh cỡ ~18px, Lớp, Môn học */
+  .card-footer-info {
+    width: 150mm !important;
+    border-top: 3px solid #000000 !important;
+    padding-top: 3.5mm !important;
+    margin-top: 3mm !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-end !important;
+    box-sizing: border-box !important;
+  }
+
+  .card-student-name {
+    font-size: 18px !important;
+    font-weight: 800 !important;
+    color: #000000 !important;
+    line-height: 1.2 !important;
+  }
+
+  .card-class-info {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #333333 !important;
+    margin-top: 1px !important;
+  }
+
+  .card-footer-right {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    text-align: right !important;
+    color: #555555 !important;
+    line-height: 1.3 !important;
+  }
+
+  .card-footer-right b {
+    color: #000000 !important;
+    font-weight: 800 !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
 }
