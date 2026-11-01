@@ -23,10 +23,7 @@ export const Header: React.FC<HeaderProps> = ({
         onClick={onHomeClick}
         title="Về trang chủ"
       >
-        <b className="text-3xl text-[#2F54D0] font-black tracking-wider">NDH</b>
-        <span className="text-lg font-bold">
-          Tương tác giấy{subtitle ? ` · ${subtitle}` : ''}
-        </span>
+        <b className="text-3xl text-[#2F54D0] font-black tracking-wider">ArUco</b>
       </div>
 
       {/* Main navigation tabs: Lớp học vs Kho đề thi */}

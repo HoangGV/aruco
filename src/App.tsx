@@ -9,6 +9,7 @@ import { ScannerView } from './components/ScannerView';
 import { PairModal } from './components/PairModal';
 import { RescueModal } from './components/RescueModal';
 import { PrintSheet, printClassCards } from './components/PrintSheet';
+import { LatexSelectionTooltip } from './components/LatexSelectionTooltip';
 import { parseMarkdownQuestions } from './lib/parser';
 import { exportToXlsx, downloadText, getStudentList } from './lib/export';
 import { portableApi, readyHost, subscribeToStatus, getStatus, closeHost } from './lib/net';
@@ -648,6 +649,9 @@ export function App() {
 
       {/* Always ready print sheets for current class */}
       {currentClass && <PrintSheet cls={currentClass} />}
+
+      {/* Real-time LaTeX preview on text selection */}
+      <LatexSelectionTooltip />
     </div>
   );
 }
