@@ -96,3 +96,87 @@ export function parseMarkdownQuestions(text: string, defaultSeconds = 30): { qs:
 
   return { qs, err };
 }
+
+export interface ParsedQuizItem {
+  title: string;
+  subject: string;
+  md: string;
+  sec: number;
+}
+
+export const BULK_GUIDE = `# Đề thi số 1
+Môn: Toán học
+## Hàm số $y=x^3-3x+1$ có đạo hàm là:
+A. $3x^2-3$
+B. $x^2-3$
+C. $3x^2+1$
+D. $3x-3$
+Đáp án: A
+Giải thích: Ta có $(x^3)' = 3x^2$, $(-3x)' = -3$.
+Thời gian: 30
+
+# Đề kiểm tra số 2 cho lớp 10
+Môn: Vật lý
+## Dao động điều hòa có phương trình $x = A\\cos(\\omega t + \\varphi)$.
+Đáp án: Đúng
+Thời gian: 30`;
+
+/**
+ * Phân tích văn bản markdown chứa nhiều bộ đề thi được phân tách bằng "# Tên đề thi"
+ */
+export function parseBulkQuizMarkdown(
+  text: string,
+  defaultSubject = 'Toán học',
+  defaultSec = 30
+): ParsedQuizItem[] {
+  const lines = (text || '').split('\n');
+  const quizzes: ParsedQuizItem[] = [];
+  let currentTitle: string | null = null;
+  let currentSubject = defaultSubject;
+  let currentSec = defaultSec;
+  let currentBody: string[] = [];
+
+  const flush = () => {
+    if (currentTitle && currentBody.length > 0) {
+      quizzes.push({
+        title: currentTitle.trim(),
+        subject: currentSubject.trim() || defaultSubject,
+        md: currentBody.join('\n').trim(),
+        sec: currentSec
+      });
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // Nhận diện dòng bắt đầu bằng "# " đơn lẻ (không phải "## " câu hỏi)
+    const headingMatch = line.match(/^#[ \t]+(.*)$/);
+    if (headingMatch && !line.startsWith('##')) {
+      flush();
+      currentTitle = headingMatch[1].trim();
+      currentSubject = defaultSubject;
+      currentSec = defaultSec;
+      currentBody = [];
+      continue;
+    }
+
+    if (currentTitle) {
+      // Dòng tùy chọn môn học hoặc thời gian ngay dưới tiêu đề đề thi
+      const subMatch = line.match(/^(?:Môn|Mon|Môn học|Mon hoc)\s*:\s*(.+)$/i);
+      const secMatch = line.match(/^(?:Thời gian|Thoi gian)\s*:\s*(\d+)$/i);
+      if (subMatch && currentBody.length === 0) {
+        currentSubject = subMatch[1].trim();
+        continue;
+      }
+      if (secMatch && currentBody.length === 0) {
+        currentSec = Math.max(5, Math.min(600, +secMatch[1] || 30));
+        continue;
+      }
+      currentBody.push(line);
+    }
+  }
+
+  flush();
+  return quizzes;
+}
+

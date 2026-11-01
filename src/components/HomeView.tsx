@@ -47,7 +47,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             className="ndh-input text-lg"
             value={data.teacher}
             onChange={e => onUpdateTeacher(e.target.value)}
-            placeholder="Ví dụ: Thầy Hoàng"
+            placeholder="Ví dụ: NgĐ Hoàng"
             autoComplete="name"
           />
         </label>

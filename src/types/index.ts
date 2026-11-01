@@ -21,9 +21,20 @@ export interface ClassItem {
   results: ClassResult[];
 }
 
+export interface QuizBank {
+  id: string;
+  title: string;
+  subject: string;
+  md: string;
+  sec?: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface AppData {
   teacher: string;
   classes: ClassItem[];
+  quizBanks?: QuizBank[];
 }
 
 export type QuestionType = 'mcq' | 'tf';

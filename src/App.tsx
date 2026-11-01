@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import type { AppData, ClassItem, SessionState } from './types';
+import type { AppData, ClassItem, SessionState, QuizBank } from './types';
 import { Header } from './components/Header';
 import { HomeView } from './components/HomeView';
 import { ClassView } from './components/ClassView';
+import { QuizBankView } from './components/QuizBankView';
 import { StageView } from './components/StageView';
 import { ScannerView } from './components/ScannerView';
 import { PairModal } from './components/PairModal';
@@ -11,99 +12,59 @@ import { PrintSheet, printClassCards } from './components/PrintSheet';
 import { parseMarkdownQuestions } from './lib/parser';
 import { exportToXlsx, downloadText, getStudentList } from './lib/export';
 import { portableApi, readyHost, subscribeToStatus, getStatus, closeHost } from './lib/net';
+import { DEFAULT_TEACHER, SAMPLE_CLASSES, SAMPLE_QUIZ_BANKS } from './lib/sampleData';
 
 const STORAGE_KEY = 'ndh-tg-v1';
-
-const DEFAULT_SAMPLE_MD = `## Hàm số $y=x^3-3x+1$ có đạo hàm là:
-A. $3x^2-3$
-B. $x^2-3$
-C. $3x^2+1$
-D. $3x-3$
-Đáp án: A
-Giải thích: Ta có $(x^3)' = 3x^2$, $(-3x)' = -3$, $(1)' = 0$. Do đó $y' = 3x^2 - 3$.
-Thời gian: 30
-
-## Đồ thị hàm số $y=\\frac{1}{x-2}$ có tiệm cận đứng là $x=2$.
-Đáp án: Đúng
-Giải thích: Khi $x \\to 2$, mẫu số tiến về $0$ nên $y \\to \\infty$.
-
-## Giá trị nhỏ nhất của $f(x)=x^2-2x+3$ trên đoạn $[0; 3]$ là:
-A. $3$
-B. $6$
-C. $2$
-D. $1$
-Đáp án: C
-Giải thích: $f(x) = (x-1)^2 + 2 \\ge 2$. Dấu bằng xảy ra khi $x = 1 \\in [0;3]$.
-Thời gian: 30
-
-## Hàm số $y=-x^3+3x$ đồng biến trên toàn bộ $\\mathbb{R}$.
-Đáp án: Sai
-Giải thích: $y' = -3x^2 + 3 = 0 \\iff x = \\pm 1$. Đạo hàm đổi dấu nên không đồng biến trên $\\mathbb{R}$.`;
-
-const DEFAULT_STUDENTS = `1. Nguyễn Văn An
-2. Trần Thị Bình
-3. Lê Văn Cường
-4. Phạm Hoàng Dũng
-5. Đỗ Minh Hạnh
-6. Bùi Quang Huy
-7. Vũ Khánh Linh
-8. Hoàng Ngọc Mai`;
 
 function getInitialData(): AppData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed.classes)) return parsed;
-    }
-  } catch {}
-
-  // Check older draft storage if available
-  try {
-    const old = localStorage.getItem('ndh-draft-html-v2');
-    if (old) {
-      const p = JSON.parse(old);
-      if (p.players && p.questions) {
+      if (Array.isArray(parsed.classes)) {
+        // Đổi tên "Thầy Hoàng" thành "NgĐ Hoàng" nếu là dữ liệu cũ
+        let teacher = parsed.teacher || DEFAULT_TEACHER;
+        if (teacher === 'Thầy Hoàng') {
+          teacher = DEFAULT_TEACHER;
+        }
         return {
-          teacher: p.config?.teacher || '',
-          classes: [
-            {
-              id: 'c_migrated',
-              name: p.config?.className || 'Lớp 12A1',
-              subject: p.config?.subject || 'Toán học',
-              names: p.players.map((pl: any) => pl.name).join('\n'),
-              md: DEFAULT_SAMPLE_MD,
-              sec: p.config?.seconds || 30,
-              elim: false,
-              results: []
-            }
-          ]
+          teacher,
+          classes: parsed.classes.length > 0 ? parsed.classes : SAMPLE_CLASSES,
+          quizBanks:
+            Array.isArray(parsed.quizBanks) && parsed.quizBanks.length > 0
+              ? parsed.quizBanks
+              : SAMPLE_QUIZ_BANKS
         };
       }
     }
   } catch {}
 
   return {
-    teacher: 'Thầy Hoàng',
-    classes: [
-      {
-        id: 'c_default',
-        name: 'Lớp 12A1',
-        subject: 'Toán học',
-        names: DEFAULT_STUDENTS,
-        md: DEFAULT_SAMPLE_MD,
-        sec: 30,
-        elim: false,
-        results: []
-      }
-    ]
+    teacher: DEFAULT_TEACHER,
+    classes: SAMPLE_CLASSES,
+    quizBanks: SAMPLE_QUIZ_BANKS
   };
+}
+
+function getInitialView(): 'home' | 'class' | 'stage' | 'scanner' | 'quizBanks' {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('scan')) return 'scanner';
+  const path = window.location.pathname;
+  if (
+    path === '/bo-cau-hoi' ||
+    path.startsWith('/bo-cau-hoi') ||
+    urlParams.get('tab') === 'bo-cau-hoi' ||
+    window.location.hash === '#/bo-cau-hoi'
+  ) {
+    return 'quizBanks';
+  }
+  return 'home';
 }
 
 export function App() {
   const [data, setData] = useState<AppData>(getInitialData);
   const [currentClassId, setCurrentClassId] = useState<string | null>(null);
-  const [view, setView] = useState<'home' | 'class' | 'stage' | 'scanner'>('home');
+  const [view, setView] = useState<'home' | 'class' | 'stage' | 'scanner' | 'quizBanks'>(getInitialView);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [stageTheme, setStageTheme] = useState<'dark' | 'cream'>('dark');
   const [room, setRoom] = useState<SessionState | null>(null);
@@ -113,7 +74,6 @@ export function App() {
   // Modals
   const [showPairModal, setShowPairModal] = useState(false);
   const [showRescueModal, setShowRescueModal] = useState(false);
-  const [showPrintModal, setShowPrintModal] = useState(false);
 
   // Hidden file inputs
   const fileMdRef = useRef<HTMLInputElement | null>(null);
@@ -141,14 +101,48 @@ export function App() {
     }, 4000);
   }, []);
 
-  // Check URL parameters for companion scanner
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const scanCode = urlParams.get('scan');
-    if (scanCode) {
-      setView('scanner');
+  // Navigate function maintaining slug history
+  const navigateTo = useCallback((targetView: 'home' | 'quizBanks' | 'class') => {
+    if (targetView === 'quizBanks') {
+      window.history.pushState(null, '', '/bo-cau-hoi');
+      setView('quizBanks');
+      setCurrentClassId(null);
+    } else if (targetView === 'home') {
+      window.history.pushState(null, '', '/');
+      setView('home');
+      setCurrentClassId(null);
+    } else {
+      setView('class');
     }
+  }, []);
 
+  // Sync with browser back/forward and hash changes
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('scan')) {
+        setView('scanner');
+        return;
+      }
+      if (
+        path === '/bo-cau-hoi' ||
+        path.startsWith('/bo-cau-hoi') ||
+        urlParams.get('tab') === 'bo-cau-hoi' ||
+        window.location.hash === '#/bo-cau-hoi'
+      ) {
+        setView('quizBanks');
+      } else {
+        setView(currentClassId ? 'class' : 'home');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [currentClassId]);
+
+  // Load theme preference
+  useEffect(() => {
     const savedTheme = localStorage.getItem('ndh-theme');
     if (savedTheme === 'cream' || savedTheme === 'dark') {
       setStageTheme(savedTheme);
@@ -178,121 +172,140 @@ export function App() {
             const updatedClasses = data.classes.map(c => {
               if (c.id === currentClass.id) {
                 const historyCount = res.state.history?.length || res.state.questionCount || 1;
-                const newResult = {
+                const scores: { id: number; name: string; score: number }[] = res.state.players.map((p: any) => ({
+                  id: p.id,
+                  name: p.name,
+                  score: p.score
+                }));
+                const newRes = {
                   at: Date.now(),
                   total: historyCount,
-                  rows: res.state.players.map((p: any) => ({
-                    id: p.id,
-                    name: p.name,
-                    score: p.score / 10
-                  }))
+                  rows: scores
                 };
                 return {
                   ...c,
-                  results: [newResult, ...(c.results || [])]
+                  results: [newRes, ...(c.results || [])]
                 };
               }
               return c;
             });
             saveData({ ...data, classes: updatedClasses });
-            showToast('Đã tự động lưu kết quả kiểm tra.');
+            showToast('Đã tự động lưu kết quả kiểm tra của lớp!');
           }
         }
       } catch {}
-    }, 400);
-
+    }, 1200);
     return () => clearInterval(interval);
   }, [view, room, hostKey, currentClass, data, saveData, showToast]);
 
-  // Stage action handler
-  const handleStageAction = async (action: string, extra: any = {}) => {
+  // Class action handlers
+  const handleAddClass = () => {
+    const newId = 'c_' + Date.now();
+    const newClass: ClassItem = {
+      id: newId,
+      name: `Lớp mới ${data.classes.length + 1}`,
+      subject: 'Toán học',
+      names: '1. Nguyễn Văn An\n2. Trần Thị Bình\n3. Lê Văn Cường',
+      md: SAMPLE_CLASSES[0].md,
+      sec: 30,
+      elim: false,
+      results: []
+    };
+    saveData({ ...data, classes: [newClass, ...data.classes] });
+    setCurrentClassId(newId);
+    setView('class');
+    showToast('Đã tạo lớp học mới.');
+  };
+
+  const handleUpdateClass = (updated: Partial<ClassItem>) => {
+    if (!currentClassId) return;
+    const updatedClasses = data.classes.map(c => {
+      if (c.id === currentClassId) {
+        return { ...c, ...updated };
+      }
+      return c;
+    });
+    saveData({ ...data, classes: updatedClasses });
+  };
+
+  const handleDeleteClass = (id: string) => {
+    const updatedClasses = data.classes.filter(c => c.id !== id);
+    saveData({ ...data, classes: updatedClasses });
+    if (currentClassId === id) {
+      setCurrentClassId(null);
+      navigateTo('home');
+    }
+    showToast('Đã xóa lớp học.');
+  };
+
+  const handleStartQuiz = async () => {
+    if (!currentClass) return;
+    const students = getStudentList(currentClass);
+    if (!students.length) {
+      showToast('Lớp chưa có học sinh. Hãy nhập danh sách tên học sinh.');
+      return;
+    }
+    const parseResult = parseMarkdownQuestions(currentClass.md, currentClass.sec || 30);
+    if (!parseResult.qs.length) {
+      showToast('Chưa có câu hỏi hợp lệ. Hãy kiểm tra lại cú pháp Markdown.');
+      return;
+    }
+
+    try {
+      showToast('Đang khởi tạo phòng thi...');
+      const players = students.map((name, i) => ({
+        id: i + 1,
+        name,
+        alive: true,
+        score: 0
+      }));
+
+      const res = await portableApi('/rooms', 'POST', {
+        config: {
+          className: currentClass.name,
+          subject: currentClass.subject,
+          seconds: currentClass.sec || 30,
+          eliminate: !!currentClass.elim,
+          sound: true,
+          music: true,
+          volume: 0.8
+        },
+        players,
+        questions: parseResult.qs
+      });
+
+      if (res.state && res.hostKey) {
+        setRoom(res.state);
+        setHostKey(res.hostKey);
+        setView('stage');
+
+        // Automatically open WebRTC datachannel listening
+        try {
+          await readyHost(res.state.code);
+        } catch (e: any) {
+          console.warn('WebRTC Host initialization notice:', e);
+        }
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Lỗi tạo phòng thi');
+    }
+  };
+
+  const handleStageAction = async (act: string, extra?: any) => {
     if (!room || !hostKey) return;
     try {
       const res = await portableApi(
         `/rooms/${room.code}/action`,
         'POST',
-        { action, ...extra },
+        { action: act, ...extra },
         hostKey
       );
       if (res.state) {
         setRoom(res.state);
       }
     } catch (e: any) {
-      showToast(e.message || 'Lỗi điều khiển phòng');
+      showToast(e.message || 'Lỗi thao tác sân khấu');
     }
-  };
-
-  // Start quiz session
-  const handleStartQuiz = async () => {
-    if (!currentClass) return;
-    const students = getStudentList(currentClass);
-    if (!students.length) return showToast('Hãy nhập danh sách học sinh.');
-    if (students.length > 250) return showToast('Tối đa 250 học sinh mỗi lớp.');
-
-    const parsed = parseMarkdownQuestions(currentClass.md, currentClass.sec || 30);
-    if (parsed.err.length || !parsed.qs.length) {
-      return showToast(parsed.err[0] || 'Hãy nhập ít nhất một câu hỏi hợp lệ.');
-    }
-
-    try {
-      const res = await portableApi(
-        '/rooms',
-        'POST',
-        {
-          config: {
-            eliminate: !!currentClass.elim,
-            seconds: currentClass.sec || 30,
-            className: currentClass.name,
-            subject: currentClass.subject,
-            teacher: data.teacher
-          },
-          players: students.map((name, i) => ({ id: i + 1, name })),
-          questions: parsed.qs
-        },
-        ''
-      );
-
-      setHostKey(res.hostKey);
-      setRoom(res.state);
-      lastSavedCodeRef.current = '';
-      setView('stage');
-
-      // Initialize WebRTC signaling
-      readyHost(res.state.code)
-        .then(() => {
-          setPhoneConnected(getStatus().phoneConnected);
-        })
-        .catch(() => {});
-    } catch (e: any) {
-      showToast(e.message || 'Không thể tạo phiên kiểm tra');
-    }
-  };
-
-  // Class Management Handlers
-  const handleAddClass = () => {
-    const newClass: ClassItem = {
-      id: 'c_' + Date.now().toString(36),
-      name: 'Lớp mới',
-      subject: '',
-      names: '',
-      md: '',
-      sec: 30,
-      elim: false,
-      results: []
-    };
-    const updated = [...data.classes, newClass];
-    saveData({ ...data, classes: updated });
-    setCurrentClassId(newClass.id);
-    setView('class');
-    showToast('Đã thêm lớp mới.');
-  };
-
-  const handleUpdateClass = (updatedFields: Partial<ClassItem>) => {
-    if (!currentClassId) return;
-    const updated = data.classes.map(c =>
-      c.id === currentClassId ? { ...c, ...updatedFields } : c
-    );
-    saveData({ ...data, classes: updated });
   };
 
   const handleDeleteResult = (idx: number) => {
@@ -312,6 +325,67 @@ export function App() {
   const handlePrintCards = () => {
     if (!currentClass) return;
     printClassCards(currentClass, showToast);
+  };
+
+  // Quiz Bank Handlers
+  const handleSaveQuizBank = (quiz: QuizBank) => {
+    const existing = (data.quizBanks || []).some(q => q.id === quiz.id);
+    let updatedQuizBanks: QuizBank[];
+    if (existing) {
+      updatedQuizBanks = (data.quizBanks || []).map(q => (q.id === quiz.id ? quiz : q));
+    } else {
+      updatedQuizBanks = [quiz, ...(data.quizBanks || [])];
+    }
+    saveData({ ...data, quizBanks: updatedQuizBanks });
+  };
+
+  const handleSaveBulkQuizBanks = (newQuizzes: QuizBank[]) => {
+    const updated = [...newQuizzes, ...(data.quizBanks || [])];
+    saveData({ ...data, quizBanks: updated });
+  };
+
+  const handleDeleteQuizBank = (id: string) => {
+    const updated = (data.quizBanks || []).filter(q => q.id !== id);
+    saveData({ ...data, quizBanks: updated });
+  };
+
+  const handleApplyQuizToClass = (quiz: QuizBank, classId: string) => {
+    const updatedClasses = data.classes.map(c => {
+      if (c.id === classId) {
+        return {
+          ...c,
+          md: quiz.md,
+          sec: quiz.sec || c.sec || 30,
+          subject: c.subject || quiz.subject
+        };
+      }
+      return c;
+    });
+    saveData({ ...data, classes: updatedClasses });
+    setCurrentClassId(classId);
+    setView('class');
+    window.history.pushState(null, '', '/');
+    showToast(`Đã nạp bộ đề "${quiz.title}" vào lớp! Thầy cô có thể chỉnh sửa tự do.`);
+  };
+
+  const handleSaveCurrentAsQuizBank = (
+    title: string,
+    subject: string,
+    md: string,
+    sec: number
+  ) => {
+    const newQuiz: QuizBank = {
+      id: 'qb_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      title,
+      subject,
+      md,
+      sec,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    const updated = [newQuiz, ...(data.quizBanks || [])];
+    saveData({ ...data, quizBanks: updated });
+    showToast(`Đã lưu "${title}" vào kho đề thi!`);
   };
 
   // Import / Export handlers
@@ -346,7 +420,11 @@ export function App() {
       if (!parsed || !Array.isArray(parsed.classes)) {
         throw new Error('Định dạng sao lưu không hợp lệ.');
       }
-      saveData({ teacher: parsed.teacher || '', classes: parsed.classes });
+      saveData({
+        teacher: parsed.teacher || DEFAULT_TEACHER,
+        classes: parsed.classes,
+        quizBanks: Array.isArray(parsed.quizBanks) ? parsed.quizBanks : SAMPLE_QUIZ_BANKS
+      });
       showToast('Đã khôi phục dữ liệu thành công.');
     } catch {
       showToast('Tệp sao lưu không hợp lệ.');
@@ -437,7 +515,9 @@ export function App() {
               ? 'Quét thẻ'
               : undefined
           }
-          onHomeClick={() => setView('home')}
+          activeTab={view === 'quizBanks' ? 'quizBanks' : 'classes'}
+          onNavigateTab={tab => navigateTo(tab === 'quizBanks' ? 'quizBanks' : 'home')}
+          onHomeClick={() => navigateTo('home')}
         >
           {view === 'home' && (
             <button
@@ -452,7 +532,7 @@ export function App() {
             <>
               <button
                 className="ndh-btn text-sm py-1.5 px-3"
-                onClick={() => setView('home')}
+                onClick={() => navigateTo('home')}
               >
                 Danh sách lớp
               </button>
@@ -493,17 +573,32 @@ export function App() {
           />
         )}
 
+        {view === 'quizBanks' && (
+          <QuizBankView
+            quizBanks={data.quizBanks || []}
+            classes={data.classes}
+            onSaveQuizBank={handleSaveQuizBank}
+            onSaveBulkQuizBanks={handleSaveBulkQuizBanks}
+            onDeleteQuizBank={handleDeleteQuizBank}
+            onApplyToClass={handleApplyQuizToClass}
+            onNavigateToClasses={() => navigateTo('home')}
+            onShowToast={showToast}
+          />
+        )}
+
         {view === 'class' && currentClass && (
           <ClassView
             cls={currentClass}
+            quizBanks={data.quizBanks || []}
             onUpdateClass={handleUpdateClass}
-            onBackToHome={() => setView('home')}
+            onBackToHome={() => navigateTo('home')}
             onPrintCards={handlePrintCards}
             onImportMd={handleImportMdClick}
             onExportMd={handleExportMd}
             onExportClassXlsx={handleExportClassXlsx}
             onDeleteResult={handleDeleteResult}
             onStartQuiz={handleStartQuiz}
+            onSaveCurrentAsQuizBank={handleSaveCurrentAsQuizBank}
           />
         )}
 

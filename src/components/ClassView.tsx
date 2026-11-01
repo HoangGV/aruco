@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import type { ClassItem } from '../types';
+import type { ClassItem, QuizBank } from '../types';
 import { parseMarkdownQuestions, GUIDE } from '../lib/parser';
 import { getStudentList } from '../lib/export';
 
 interface ClassViewProps {
   cls: ClassItem;
+  quizBanks: QuizBank[];
   onUpdateClass: (updated: Partial<ClassItem>) => void;
   onBackToHome: () => void;
   onPrintCards: () => void;
@@ -13,10 +14,12 @@ interface ClassViewProps {
   onExportClassXlsx: () => void;
   onDeleteResult: (index: number) => void;
   onStartQuiz: () => void;
+  onSaveCurrentAsQuizBank: (title: string, subject: string, md: string, sec: number) => void;
 }
 
 export const ClassView: React.FC<ClassViewProps> = ({
   cls,
+  quizBanks,
   onUpdateClass,
   onBackToHome,
   onPrintCards,
@@ -24,9 +27,14 @@ export const ClassView: React.FC<ClassViewProps> = ({
   onExportMd,
   onExportClassXlsx,
   onDeleteResult,
-  onStartQuiz
+  onStartQuiz,
+  onSaveCurrentAsQuizBank
 }) => {
   const [confirmDeleteIdx, setConfirmDeleteIdx] = useState<number | null>(null);
+  const [isPickQuizModalOpen, setIsPickQuizModalOpen] = useState(false);
+  const [isSaveQuizModalOpen, setIsSaveQuizModalOpen] = useState(false);
+  const [saveTitle, setSaveTitle] = useState('');
+  const [saveSubject, setSaveSubject] = useState(cls.subject || 'Toán học');
   const students = useMemo(() => getStudentList(cls), [cls.names]);
   const parsed = useMemo(() => parseMarkdownQuestions(cls.md, cls.sec || 30), [cls.md, cls.sec]);
 
@@ -97,7 +105,29 @@ export const ClassView: React.FC<ClassViewProps> = ({
 
       {/* Questions (Markdown) */}
       <section className="ndh-box p-4 space-y-3">
-        <h2 className="text-xl font-bold border-b-2 border-black pb-2">Câu hỏi (Markdown)</h2>
+        <div className="flex justify-between items-center border-b-2 border-black pb-2 flex-wrap gap-2">
+          <h2 className="text-xl font-bold">Câu hỏi (Markdown)</h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              className="ndh-btn ndh-btn-pri text-xs md:text-sm font-bold flex items-center gap-1.5"
+              onClick={() => setIsPickQuizModalOpen(true)}
+              title="Chọn một bộ đề thi có sẵn từ kho để nạp vào lớp học này"
+            >
+              📚 Chọn từ kho đề thi
+            </button>
+            <button
+              className="ndh-btn text-xs md:text-sm font-semibold"
+              onClick={() => {
+                setSaveTitle(`Bộ đề ${cls.name || 'Lớp'}${cls.subject ? ' - ' + cls.subject : ''}`);
+                setSaveSubject(cls.subject || 'Toán học');
+                setIsSaveQuizModalOpen(true);
+              }}
+              title="Lưu các câu hỏi hiện tại vào kho đề thi để tái sử dụng cho lớp khác"
+            >
+              💾 Lưu vào kho đề
+            </button>
+          </div>
+        </div>
         <textarea
           className="ndh-input font-mono text-sm leading-relaxed"
           rows={10}
@@ -238,6 +268,143 @@ export const ClassView: React.FC<ClassViewProps> = ({
                 }}
               >
                 Xác nhận xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Chọn từ kho đề thi */}
+      {isPickQuizModalOpen && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-3 md:p-6 z-50 overflow-y-auto">
+          <div className="ndh-box p-6 max-w-2xl w-full bg-white space-y-4 my-auto shadow-2xl">
+            <div className="flex justify-between items-center border-b-2 border-black pb-3">
+              <h3 className="text-xl md:text-2xl font-black">
+                📚 Chọn bộ đề thi cho {cls.name}
+              </h3>
+              <button
+                className="text-2xl font-black text-neutral-500 hover:text-black"
+                onClick={() => setIsPickQuizModalOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-sm font-semibold text-neutral-600">
+              Chọn một bộ đề thi từ kho để áp dụng cho lớp học này. Thầy cô hoàn toàn có thể chỉnh sửa lại sau khi chọn.
+            </p>
+
+            <div className="max-h-[50vh] overflow-y-auto space-y-3 p-1">
+              {quizBanks.length === 0 ? (
+                <div className="p-8 text-center text-neutral-500 font-semibold border-2 border-dashed border-black">
+                  Kho đề thi đang trống. Hãy vào trang "Kho đề thi" để tạo các bộ đề mẫu.
+                </div>
+              ) : (
+                quizBanks.map(qb => {
+                  const qCount = parseMarkdownQuestions(qb.md, qb.sec || 30).qs.length;
+                  return (
+                    <div
+                      key={qb.id}
+                      className="p-4 border-2 border-black hover:border-[#2F54D0] hover:bg-blue-50/50 transition flex justify-between items-center gap-4 flex-wrap"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black uppercase bg-black text-white px-2 py-0.5">
+                            {qb.subject || 'Toán học'}
+                          </span>
+                          <span className="text-xs font-bold text-neutral-500">
+                            ⏱ {qb.sec || 30}s / câu
+                          </span>
+                        </div>
+                        <h4 className="text-base font-black">{qb.title}</h4>
+                        <div className="text-xs font-bold text-neutral-600">
+                          {qCount} câu hỏi hợp lệ
+                        </div>
+                      </div>
+
+                      <button
+                        className="ndh-btn ndh-btn-pri text-sm font-bold"
+                        onClick={() => {
+                          onUpdateClass({
+                            md: qb.md,
+                            sec: qb.sec || cls.sec || 30,
+                            subject: cls.subject || qb.subject
+                          });
+                          setIsPickQuizModalOpen(false);
+                        }}
+                      >
+                        Nạp đề này vào lớp
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="flex justify-end pt-3 border-t-2 border-black">
+              <button
+                className="ndh-btn"
+                onClick={() => setIsPickQuizModalOpen(false)}
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Lưu câu hỏi vào kho đề */}
+      {isSaveQuizModalOpen && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="ndh-box p-6 max-w-md w-full bg-white space-y-4 shadow-2xl">
+            <h3 className="text-2xl font-black">Lưu vào kho đề thi</h3>
+            <p className="text-sm font-semibold text-neutral-700">
+              Lưu bộ câu hỏi hiện tại ({parsed.qs.length} câu) thành một đề thi dùng chung trong kho đề.
+            </p>
+
+            <label className="font-semibold block space-y-1">
+              <span>Tên bộ đề thi *</span>
+              <input
+                type="text"
+                className="ndh-input font-bold"
+                value={saveTitle}
+                onChange={e => setSaveTitle(e.target.value)}
+                placeholder="Ví dụ: Đề kiểm tra 15 phút Giải tích"
+              />
+            </label>
+
+            <label className="font-semibold block space-y-1">
+              <span>Môn học</span>
+              <input
+                type="text"
+                className="ndh-input"
+                value={saveSubject}
+                onChange={e => setSaveSubject(e.target.value)}
+                placeholder="Ví dụ: Toán học"
+              />
+            </label>
+
+            <div className="flex justify-end gap-3 pt-3 border-t-2 border-black">
+              <button
+                className="ndh-btn"
+                onClick={() => setIsSaveQuizModalOpen(false)}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                className="ndh-btn ndh-btn-pri font-bold"
+                disabled={!saveTitle.trim() || parsed.qs.length === 0}
+                onClick={() => {
+                  onSaveCurrentAsQuizBank(
+                    saveTitle.trim(),
+                    saveSubject.trim() || 'Toán học',
+                    cls.md,
+                    cls.sec || 30
+                  );
+                  setIsSaveQuizModalOpen(false);
+                }}
+              >
+                Xác nhận lưu
               </button>
             </div>
           </div>
